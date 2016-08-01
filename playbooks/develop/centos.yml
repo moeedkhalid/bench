@@ -1,19 +1,13 @@
 ---
 - hosts: localhost
   vars:
-    bench_repo_path: "/usr/local/frappe/bench-repo"
-    bench_path: "/home/{{ ansible_user_id }}/frappe/frappe-bench"
+    bench_repo_path: "/home/{{ ansible_user_id }}/.bench"
+    bench_path: "/home/{{ ansible_user_id }}/frappe-bench"
     mysql_config_template: "templates/simple_mariadb_config.cnf"
     mysql_conf_dir: /etc/my.cnf.d/
     wkhtmltopdf_version: 0.12.2.1
 
   tasks:
-
-  # install pre-requisites
-  - name: add epel repo
-    yum: name="https://dl.fedoraproject.org/pub/epel/{{ ansible_lsb.major_release }}/x86_64/e/epel-release-*.rpm" state=present
-    become: yes
-    become_user: root
 
   - name: development tools package
     yum: name="@Development tools" state=present
@@ -25,11 +19,10 @@
     with_items:
       # basic installs
       - redis
-      - nodejs
-      - npm
 
       # for mariadb
-      - software-properties-common
+      - mysql-devel
+      - mysql-libs
 
       # for wkhtmltopdf
       - libXrender
@@ -47,7 +40,21 @@
       - libtiff-devel
       - tcl-devel
       - tk-devel
+    become: yes
+    become_user: root
 
+  - name: Add repo nodejs 5
+    yum:
+      name: https://rpm.nodesource.com/pub_5.x/el/7/x86_64/nodesource-release-el7-1.noarch.rpm
+      state: present
+    become: yes
+    become_user: root
+
+  - name: Install nodejs v5
+    yum:
+      name: nodejs
+      state: present
+      update_cache: yes
     become: yes
     become_user: root
 
@@ -62,3 +69,8 @@
 
   # setup frappe-bench
   - include: includes/setup_bench.yml
+    when: not run_travis and without_bench_setup
+
+  # setup development environment
+  - include: includes/setup_dev_env.yml
+    when: not run_travis and not production
